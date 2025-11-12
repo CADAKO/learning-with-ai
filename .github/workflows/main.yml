@@ -28,9 +28,9 @@ jobs:
     - name: Install Python dependencies
       run: |
         # Устанавливаем зависимости проекта (pytest, requests, allure-pytest, psycopg2)
-        pip install --no-cache-dir -r qa_db_project/requirements.txt
+        pip install --no-cache-dir -r requirements.txt
         # Устанавливаем зависимости API тоже (хотя они нужны только внутри Docker)
-        pip install --no-cache-dir -r qa_db_project/api/requirements.txt
+        pip install --no-cache-dir -r api/requirements.txt
 
     - name: Prepare Allure Results Directory
       run: |

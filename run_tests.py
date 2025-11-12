@@ -31,17 +31,17 @@ def main():
     # потому что 'run --rm' сам остановит зависимые сервисы после завершения тестов
     run_command(["docker compose", "run", "--rm", "tests"])
 
-    # 4. Генерация HTML-отчета Allure (требует локально установленного Allure CLI)
-    print("\n--- Генерация Allure отчета ---")
-    allure_report_dir = "allure-report"
-    if os.path.exists(allure_report_dir):
-        shutil.rmtree(allure_report_dir)
-
-    run_command(["allure", "generate", allure_results_dir, "--clean", "-o", allure_report_dir])
-
-    # 5. Открытие отчета в браузере
-    print("\n--- Открытие отчета в браузере ---")
-    run_command(["allure", "open", allure_report_dir], check=False)
+    # # 4. Генерация HTML-отчета Allure (требует локально установленного Allure CLI)
+    # print("\n--- Генерация Allure отчета ---")
+    # allure_report_dir = "allure-report"
+    # if os.path.exists(allure_report_dir):
+    #     shutil.rmtree(allure_report_dir)
+    #
+    # run_command(["allure", "generate", allure_results_dir, "--clean", "-o", allure_report_dir])
+    #
+    # # 5. Открытие отчета в браузере
+    # print("\n--- Открытие отчета в браузере ---")
+    # run_command(["allure", "open", allure_report_dir], check=False)
 
 
 if __name__ == "__main__":

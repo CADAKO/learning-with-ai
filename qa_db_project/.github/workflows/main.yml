@@ -26,10 +26,11 @@ jobs:
         sudo apt-get install allure
 
     - name: Install Python dependencies
-      run: |
-        # Устанавливаем зависимости проекта (pytest, requests, allure-pytest, psycopg2)
+      run:
+    # Устанавливаем зависимости из корневого requirements.txt
         pip install --no-cache-dir -r requirements.txt
-        # Устанавливаем зависимости API тоже (хотя они нужны только внутри Docker)
+    
+    # Устанавливаем зависимости из api/requirements.txt, указывая путь к папке
         pip install --no-cache-dir -r api/requirements.txt
 
     - name: Prepare Allure Results Directory

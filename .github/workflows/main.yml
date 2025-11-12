@@ -36,8 +36,6 @@ jobs:
       run: |
         echo "Checking docker version:"
         docker version
-        echo "Checking docker-compose version (with hyphen):"
-        docker-compose version
         echo "Checking docker compose version (without hyphen):"
         docker compose version
 

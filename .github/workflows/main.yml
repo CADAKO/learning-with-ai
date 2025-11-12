@@ -23,7 +23,8 @@ jobs:
     - name: Install Allure CLI (on the VM)
       run: |
         # Allure CLI нужен на виртуальной машине для генерации отчета
-        sudo apt-get install allure
+        sudo apt-get update
+        sudo apt-get install -y allure
 
     - name: Install Python dependencies
       run: |

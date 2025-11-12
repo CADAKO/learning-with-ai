@@ -1,5 +1,0 @@
-# requirements.txt
-psycopg2-binary
-pytest
-requests
-allure-pytest

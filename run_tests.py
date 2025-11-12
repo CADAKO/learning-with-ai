@@ -23,13 +23,13 @@ def main():
 
     # 2. Сборка образов Docker
     print("\n--- Сборка Docker образов ---")
-    run_command(["docker-compose", "build", "tests", "api"])
+    run_command(["docker compose", "build", "tests", "api"])
 
     # 3. Запуск тестов внутри Docker контейнера
     print("\n--- Запуск тестов и генерация сырых данных Allure ---")
     # Обратите внимание: мы не используем 'docker compose down' здесь,
     # потому что 'run --rm' сам остановит зависимые сервисы после завершения тестов
-    run_command(["docker-compose", "run", "--rm", "tests"])
+    run_command(["docker compose", "run", "--rm", "tests"])
 
     # 4. Генерация HTML-отчета Allure (требует локально установленного Allure CLI)
     print("\n--- Генерация Allure отчета ---")

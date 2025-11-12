@@ -2,7 +2,6 @@
 from decimal import Decimal
 
 
-
 def test_product_count(db_connection):
     """Проверка общего количества товаров в таблице."""
     cursor = db_connection.cursor()
@@ -22,5 +21,3 @@ def test_inactive_product_price(db_connection):
     expected_price = Decimal('75.20')
     assert result == expected_price, f"Ожидали цену 75.20, но получили {result}"
     cursor.close()
-
-

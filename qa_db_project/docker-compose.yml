@@ -37,6 +37,8 @@ services:
   # Сервис для запуска автотестов
   tests:
     build: .
+    volumes:
+      - ./allure-results:/app/allure-results
     depends_on:
       db:
         condition: service_healthy # Запускаем тесты только после того, как БД будет готова
@@ -48,4 +50,4 @@ services:
       DB_USER: user
       DB_PASS: password
       API_URL: http://api:5000 # URL API внутри сети Docker
-    command: pytest -k "api" # Команда для запуска тестов
+    command: pytest --alluredir=allure-results # Команда для запуска тестов

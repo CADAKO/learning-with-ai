@@ -32,14 +32,21 @@ jobs:
         # Устанавливаем зависимости API тоже (хотя они нужны только внутри Docker)
         pip install --no-cache-dir -r api/requirements.txt
 
+    - name: Diagnose Docker Installation
+      run: |
+        echo "Checking docker version:"
+        docker version
+        echo "Checking docker-compose version (with hyphen):"
+        docker-compose version
+        echo "Checking docker compose version (without hyphen):"
+        docker compose version
+
     - name: Prepare Allure Results Directory
       run: |
         mkdir -p allure-results
 
     - name: Run Tests with Docker Compose
       run: |
-        # Запускаем скрипт, который мы написали ранее.
-        # Он использует docker-compose run, чтобы запустить db и tests.
         python run_tests.py
       # Если этот шаг завершится неудачно, пайплайн остановится с ошибкой.
 

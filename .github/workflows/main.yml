@@ -1,63 +1,37 @@
 # .github/workflows/main.yml
 
-name: QA Database Integration Tests
+name: QA Database Integration Tests CI Only
 
 on:
   push:
     branches:
-      - main # Запускать этот пайплайн при коммите в ветку main
+      - main
 
 jobs:
   run-db-tests:
-    runs-on: ubuntu-latest # Использовать свежую виртуальную машину Ubuntu
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v4 # 1. Получить код из репозитория
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.9' # 2. Установить Python 3.9
-
-#    - name: Install Allure CLI (on the VM)
-#      run: |
-#        # Allure CLI нужен на виртуальной машине для генерации отчета
-#        sudo apt-get update
-#        sudo apt-get install -y allure
-
-    - name: Install Python dependencies
-      run: |
-        # Устанавливаем зависимости проекта (pytest, requests, allure-pytest, psycopg2)
-        pip install --no-cache-dir -r requirements.txt
-        # Устанавливаем зависимости API тоже (хотя они нужны только внутри Docker)
-        pip install --no-cache-dir -r api/requirements.txt
-
-    - name: Diagnose Docker Installation
-      run: |
-        echo "Checking docker version:"
-        docker version
-        echo "Checking docker compose version (without hyphen):"
-        docker compose version
+      uses: actions/checkout@v4
 
     - name: Prepare Allure Results Directory
+      # Создаем пустую папку для результатов
       run: |
         mkdir -p allure-results
 
-    - name: Run Tests with Docker Compose
+    - name: Run Tests using Docker Compose (CI)
+      # Запускаем docker-compose up, чтобы запустить все сервисы и дождаться их завершения.
+      # Команда "tests" завершится, когда pytest отработает.
+      # Мы используем встроенную команду "docker compose" (без дефиса), которая работает на GitHub VM.
       run: |
-        python run_tests.py
-      # Если этот шаг завершится неудачно, пайплайн остановится с ошибкой.
-
-#    - name: Generate Allure Report and Open (Skip in CI)
-#      run: |
-#        # В CI/CD мы не можем "открыть" отчет в браузере виртуальной машины,
-#        # поэтому мы просто генерируем его без открытия.
-#        allure generate allure-results --clean -o allure-report
-#      # Мы можем загрузить этот артефакт в GitHub, чтобы вы могли его посмотреть позже:
+        docker compose up --build tests --exit-code-from tests
 
     - name: Upload Allure Results Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: allure-results-raw # Изменили имя артефакта
-        path: allure-results      # Изменили путь, который ищем
+        name: allure-results-raw
+        path: allure-results
+      # Условие: загружать артефакт, даже если предыдущий шаг (Run Tests) упал.
+      # Это позволит вам увидеть логи упавших тестов.
+      if: always()

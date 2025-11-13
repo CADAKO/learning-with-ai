@@ -22,6 +22,23 @@ services:
       timeout: 5s
       retries: 5
 
+  discount:
+    build:
+      context: ./discount_service
+      dockerfile: Dockerfile.api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+    ports:
+      - "5001:5001"
+    healthcheck: # <<< ДОБАВЛЕНО/ПРОВЕРЕНО
+      test: [ "CMD", "curl", "-f", "http://localhost:5001/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: ./api
@@ -29,10 +46,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      discount:
+        condition: service_started
     environment:
       DB_HOST: db # API использует имя сервиса БД "db"
+      DISCOUNT_SERVICE_URL: http://discount:5001
     ports:
       - "5000:5000"
+    healthcheck: # <<< ДОБАВЛЕНО/ПРОВЕРЕНО
+      test: [ "CMD", "curl", "-f", "http://localhost:5000/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 
   # Сервис для запуска автотестов
   tests:
@@ -43,7 +69,9 @@ services:
       db:
         condition: service_healthy # Запускаем тесты только после того, как БД будет готова
       api: # Тесты зависят от API
-        condition: service_started
+        condition: service_healthy
+      discount:
+        condition: service_healthy
     environment:
       DB_HOST: db # Имя хоста внутри сети Docker - это имя сервиса 'db'
       DB_NAME: testdb

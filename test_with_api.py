@@ -2,9 +2,10 @@ import requests
 import os
 from decimal import Decimal
 import allure
+from unittest.mock import MagicMock, patch
+import pytest
 
 API_URL = os.environ.get("API_URL", "http://localhost:5000")
-
 
 @allure.feature("Product Management")
 @allure.story("Add new product")
@@ -37,7 +38,7 @@ def test_add_new_product_via_api_and_verify_in_db(db_connection):
 
         assert name == "Monitor"
         # Используем Decimal для точного сравнения цены
-        assert price_decimal == Decimal("299.99")
+        assert price_decimal == Decimal("269.99")
         assert is_active is True  # Проверяем, что по умолчанию он активен
     with allure.step("Очистка тестовых данных"):
         # Чистим за собой
@@ -71,13 +72,6 @@ def test_add_invalid_product_via_api_and_verify_in_db(db_connection):
     assert result is None, "Продукт не найден в базе данных после запроса API"
 
     cursor.close()
-
-
-import allure
-import psycopg2
-import pytest
-from decimal import Decimal
-
 
 # ... остальные импорты (requests, os, time, BaseLocators)
 
@@ -119,5 +113,50 @@ def test_deactivate_laptop_via_mock_api(db_connection):
 
         # Можете добавить финальную проверку, что cleanup прошел успешно, если хотите
         print("Cleanup завершен: Laptop снова активен.")
+
+@allure.feature("Product Management")
+@allure.story("Add new product")
+def test_add_new_product__with_discount_via_api_and_verify_in_db(db_connection):
+    """
+    Отправляем POST-запрос через API и проверяем результат SQL-запросом.
+    """
+    with allure.step("Подготовка данных и отправка запроса API"):
+        new_product_data = {
+            "name": "Phone",
+            "price": "300.00"
+        }
+
+        # 1. Действие: Отправляем запрос к API
+        response = requests.post(f"{API_URL}/product", json=new_product_data)
+        assert response.status_code == 201
+        response_data = response.json()
+        new_product_id = response_data['id']
+
+    # 2. Валидация в БД: Проверяем, что запись появилась и данные верны
+    with allure.step("Валидация данных в базе данных"):
+        cursor = db_connection.cursor()
+        cursor.execute("SELECT name, price, is_active FROM products WHERE id = %s;", (new_product_id,))
+        result = cursor.fetchone()
+        assert result is not None, "Продукт не найден в базе данных после запроса API"
+
+        allure.attach(str(result), 'Данные из БД', attachment_type=allure.attachment_type.TEXT)
+
+        name, price_discount, is_active = result
+
+        assert name == "Phone"
+        # Используем Decimal для точного сравнения цены
+        assert str(price_discount) == str("270.00")
+        assert is_active is True  # Проверяем, что по умолчанию он активен
+    with allure.step("Очистка тестовых данных"):
+        # Чистим за собой
+        cursor.execute("DELETE FROM products WHERE id = %s;", (new_product_id,))
+        db_connection.commit()
+        # Проверяем, что хорошо почистили
+        cursor.execute("SELECT name, price, is_active FROM products WHERE id = %s;", (new_product_id,))
+        result = cursor.fetchone()
+
+        assert result is None, "Продукт найден в базе данных после чистки"
+    cursor.close()
+
 
 

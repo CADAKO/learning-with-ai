@@ -7,6 +7,7 @@ import pytest
 
 API_URL = os.environ.get("API_URL", "http://localhost:5000")
 
+
 @allure.feature("Product Management")
 @allure.story("Add new product")
 def test_add_new_product_via_api_and_verify_in_db(db_connection):
@@ -73,6 +74,7 @@ def test_add_invalid_product_via_api_and_verify_in_db(db_connection):
 
     cursor.close()
 
+
 # ... остальные импорты (requests, os, time, BaseLocators)
 
 # ... (фикстура db_connection и API_URL) ...
@@ -114,9 +116,10 @@ def test_deactivate_laptop_via_mock_api(db_connection):
         # Можете добавить финальную проверку, что cleanup прошел успешно, если хотите
         print("Cleanup завершен: Laptop снова активен.")
 
+
 @allure.feature("Product Management")
 @allure.story("Add new product")
-def test_add_new_product__with_discount_via_api_and_verify_in_db(db_connection):
+def test_add_new_product_with_discount_via_api_and_verify_in_db(db_connection):
     """
     Отправляем POST-запрос через API и проверяем результат SQL-запросом.
     """
@@ -145,7 +148,7 @@ def test_add_new_product__with_discount_via_api_and_verify_in_db(db_connection):
 
         assert name == "Phone"
         # Используем Decimal для точного сравнения цены
-        assert str(price_discount) == str("270.00")
+        assert price_discount == Decimal("270.0000")
         assert is_active is True  # Проверяем, что по умолчанию он активен
     with allure.step("Очистка тестовых данных"):
         # Чистим за собой
@@ -159,4 +162,38 @@ def test_add_new_product__with_discount_via_api_and_verify_in_db(db_connection):
     cursor.close()
 
 
+@allure.feature("Product Management")
+@allure.story("Add product with Invalid price")
+def test_invalid_price_via_api(db_connection):
+    with allure.step("Подготовка данных и отправка запроса API"):
+        new_product_data = {"name": "Invalid Price Item", "price": "abc"}
+        response = requests.post(f"{API_URL}/product", json=new_product_data)
+        assert response.status_code == 400
 
+    # 2. Валидация в БД: Проверяем, что запись не появилась
+    with allure.step("Валидация данных в базе данных"):
+        cursor = db_connection.cursor()
+        cursor.execute("SELECT COUNT(*) FROM products WHERE name = %s;", ("Invalid Price Item",))
+        result = cursor.fetchone()[0]
+        assert result == 0, "Продукт найден в базе данных после запроса API"
+
+    cursor.close()
+
+@allure.feature("Product Management")
+@allure.story("Add new product with zero price")
+def test_zero_price_item(db_connection):
+    with allure.step("Подготовка данных и отправка запроса API"):
+        new_product_data = {"name": "Free Item", "price": "0.00"}
+        response = requests.post(f"{API_URL}/product", json=new_product_data)
+        assert response.status_code == 201
+
+    # 2. Валидация в БД: Проверяем, что запись не появилась
+    with allure.step("Валидация данных в базе данных"):
+        cursor = db_connection.cursor()
+        cursor.execute("SELECT COUNT(*) FROM products WHERE name = %s;", ("Free Item",))
+        result = cursor.fetchone()[0]
+        assert result == 1, "Продукт найден в базе данных после запроса API"
+    cursor.execute("DELETE FROM products WHERE name = %s;", ("Free Item",))
+    db_connection.commit()
+
+    cursor.close()

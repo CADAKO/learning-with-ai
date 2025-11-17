@@ -31,6 +31,9 @@ services:
         condition: service_healthy
     environment:
       DB_HOST: db
+      # >>>>> для перехвата charles:
+#      http_proxy: http://host.docker.internal:8888
+#      https_proxy: http://host.docker.internal:8888
     ports:
       - "5001:5001"
     healthcheck: # <<< ДОБАВЛЕНО/ПРОВЕРЕНО
@@ -51,6 +54,9 @@ services:
     environment:
       DB_HOST: db # API использует имя сервиса БД "db"
       DISCOUNT_SERVICE_URL: http://discount:5001
+      # >>>>> Для перехвата Charles:
+#      http_proxy: http://host.docker.internal:8888
+#      https_proxy: http://host.docker.internal:8888
     ports:
       - "5000:5000"
     healthcheck: # <<< ДОБАВЛЕНО/ПРОВЕРЕНО
@@ -78,4 +84,7 @@ services:
       DB_USER: user
       DB_PASS: password
       API_URL: http://api:5000 # URL API внутри сети Docker
-    command: pytest --alluredir=allure-results # Команда для запуска тестов
+      # >>>>> Для перехвата Charles:
+#      http_proxy: http://host.docker.internal:8888
+#      https_proxy: http://host.docker.internal:8888
+    command: pytest --alluredir=allure-results # Команда для запуска тестов с отчетом allure

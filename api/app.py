@@ -3,7 +3,7 @@ import requests
 from flask import Flask, request, jsonify
 import psycopg2
 import os
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 
 app = Flask(__name__)
@@ -11,7 +11,8 @@ DISCOUNT_SERVICE_URL = os.environ.get("DISCOUNT_SERVICE_URL", "http://localhost:
 
 # Параметры БД
 DB_HOST = os.environ.get("DB_HOST", "db")
-DB_NAME = os.environ.get("DB_NAME", "testdb")
+DB_NAME = os.environ.get("DB_NAME", "te"
+                                    "stdb")
 DB_USER = os.environ.get("DB_USER", "user")
 DB_PASS = os.environ.get("DB_PASS", "password")
 
@@ -55,6 +56,10 @@ def add_product():
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
+        try:
+            Decimal(str(price))  # Попытка преобразования
+        except InvalidOperation:
+            return jsonify({"error": "Price must be a valid number"}), 400
         price = get_discount(price)
         cursor.execute(
             "INSERT INTO products (name, price) VALUES (%s, %s) RETURNING id;",

@@ -88,3 +88,14 @@ services:
 #      http_proxy: http://host.docker.internal:8888
 #      https_proxy: http://host.docker.internal:8888
     command: pytest --alluredir=allure-results # Команда для запуска тестов с отчетом allure
+
+  load_tests:
+    build: . # Использует тот же Dockerfile и requirements.txt, что и сервис tests
+    depends_on:
+      api:
+        condition: service_healthy # Ждет, пока API будет готово
+    environment:
+      API_URL: http://api:5000 # URL для обращения к API внутри сети Docker
+    ports:
+      - "8089:8089" # Порт веб-интерфейса Locust
+    command: locust --web-host 0.0.0.0 --host http://api:5000 # Команда запуска Locust

@@ -5,7 +5,6 @@ import psycopg2
 import os
 from decimal import Decimal, InvalidOperation
 
-
 app = Flask(__name__)
 DISCOUNT_SERVICE_URL = os.environ.get("DISCOUNT_SERVICE_URL", "http://localhost:5001")
 
@@ -52,6 +51,8 @@ def add_product():
 
     if not name or not price:
         return jsonify({"error": "Missing name or price"}), 400
+    if price[0] == "-" or len(name)>100 or len(name)<1:
+        return jsonify({"error": "Invalid name or price"}), 400
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -68,6 +69,90 @@ def add_product():
         new_id = cursor.fetchone()[0]
         conn.commit()
         return jsonify({"status": "success", "id": new_id}), 201
+    except psycopg2.Error as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/product/<int:product_id>', methods=['GET'])
+def get_product(product_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT * FROM products WHERE id = %s;", (product_id,))
+        product_data = cursor.fetchone()
+        if product_data is None:
+            return jsonify({"error": "Product not found"}), 404
+        # Преобразуем результат в словарь для красивого JSON-ответа
+        name, price, is_active = product_data
+        response_data = {
+            "name": name,
+            "price": str(price),
+            "is_active": is_active
+        }
+        return jsonify({"status": "success", "product": response_data}), 200
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/product/<int:product_id>', methods=['PUT'])
+def update_product(product_id):
+    # Устанавливаем соединение с базой
+    conn = get_db_connection()
+    # Достаем курсор
+    cursor = conn.cursor()
+
+    try:
+        # Посмотрим сначала, есть ли такой продукт
+        cursor.execute(
+            "SELECT COUNT(*) FROM products WHERE id = %s;",
+            (product_id,))
+        product_check = cursor.fetchone()[0]
+        if product_check < 1:
+            return jsonify({"error": "Product not found"}), 404
+        data = request.get_json()
+        name = data.get('name')
+        price = data.get('price')
+        active = data.get('is_active', True)
+        if not name or not price:
+            return jsonify({"error": "Missing name or price"}), 400
+        if price[0] == "-" or len(name) > 100 or len(name) < 1:
+            return jsonify({"error": "Invalid name or price"}), 400
+        try:
+            Decimal(str(price))  # Попытка преобразования
+        except InvalidOperation:
+            return jsonify({"error": "Price must be a valid number"}), 400
+        cursor.execute(
+            "UPDATE products SET name = %s, price = %s, is_active = %s WHERE id = %s;",
+            (name, price, active, product_id,)
+        )
+        conn.commit()
+        return jsonify({"status": "success", "id": product_id}), 200
+    except psycopg2.Error as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/product/<int:product_id>', methods=['DELETE'])
+def delete_product(product_id):
+    # Устанавливаем соединение с базой
+    conn = get_db_connection()
+    # Достаем курсор
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            "DELETE FROM products WHERE id = %s;", (product_id,))
+        conn.commit()
+        return "", 204
     except psycopg2.Error as e:
         conn.rollback()
         return jsonify({"error": str(e)}), 500

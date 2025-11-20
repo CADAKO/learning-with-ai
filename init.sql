@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS products (
 
 -- Вставка тестовых данных
 INSERT INTO products (name, price, is_active) VALUES
-('Laptop', 1200.50, TRUE),
+('Laptop', 9999.50, TRUE),
 ('Mouse', 25.00, TRUE),
 ('Keyboard', 75.20, FALSE)
 ON CONFLICT (id) DO NOTHING; -- Чтобы не вставлять данные повторно при перезапуске

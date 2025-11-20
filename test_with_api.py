@@ -46,7 +46,38 @@ def test_deactivate_laptop_via_mock_api(db_connection):
         print("Cleanup завершен: Laptop снова активен.")
 
 
-@allure.feature("Product Management Via API")
+@allure.feature("Product Management GET Via API")
+class TestGetProduct:
+    @allure.story("Get valid product")
+    def test_get_valid_product(self, db_connection, product_setup):
+        with allure.step("Получение данных через API"):
+            product_id = product_setup
+            response = requests.get(f"{API_URL}/product/{product_id}")
+            assert response.status_code == 200
+            response_data = response.json()
+            product_data_from_api = response_data['product']  # Получаем словарь продукта
+            name = product_data_from_api['name']
+            price = product_data_from_api['price']
+            active = product_data_from_api['is_active']
+        with allure.step("Сравнение с данными из базы"):
+            cursor = db_connection.cursor()
+            cursor.execute("SELECT name, price, is_active FROM products WHERE id = %s", (product_id,))
+            product_data = cursor.fetchone()
+            name_from_bd, price_from_bd, active_from_bd = product_data
+            assert name == name_from_bd
+            assert Decimal(price) == price_from_bd
+            assert active == active_from_bd
+            cursor.close()
+
+    @allure.story("Get product from invalid ID")
+    def test_get_invalid_id_product(self):
+        with allure.step("Получение данных из ID=9999999"):
+            invalid_id = 9999999
+            response = requests.get(f"{API_URL}/product/{invalid_id}")
+            assert response.status_code == 404
+
+
+@allure.feature("Product Management ADD Via API")
 class TestAddProduct:
     @allure.story("Add new product")
     def test_add_new_product_via_api_and_verify_in_db(self, db_connection):
@@ -264,10 +295,11 @@ class TestAddProduct:
         cursor.close()
 
 
+@allure.feature("Product Management UPDATE Via API")
 class TestUpdateProduct:
     @allure.story("Update product with valid data")
     def test_update_product_and_verify_in_db(self, db_connection, product_setup):
-        product_id=product_setup
+        product_id = product_setup
         with allure.step("Обновление данных"):
             product_new_data = {
                 "name": "Pineapple Phone",
@@ -286,3 +318,60 @@ class TestUpdateProduct:
             assert active is True
             cursor.close()
 
+    @allure.story("Update product with no name")
+    def test_update_product_without_name(self, db_connection, product_setup):
+        product_id = product_setup
+        cursor = db_connection.cursor()
+        with allure.step("Копируем исходные данные"):
+            cursor.execute("SELECT name, price FROM products WHERE id = %s;", (product_id,))
+            old_data = cursor.fetchone()
+        with allure.step("Обновление данных"):
+            product_new_data = {
+                "name": "",
+                "price": "1.00"
+            }
+            response = requests.put(f"{API_URL}/product/{product_id}", json=product_new_data)
+            assert response.status_code == 400
+
+        with allure.step("Проверка"):
+            cursor.execute("SELECT name, price FROM products WHERE id = %s;", (product_id,))
+            result = cursor.fetchone()
+            assert old_data == result
+        cursor.close()
+
+    @allure.story("Update product with no price")
+    def test_update_product_without_name(self, db_connection, product_setup):
+        product_id = product_setup
+        cursor = db_connection.cursor()
+        with allure.step("Копируем исходные данные"):
+            cursor.execute("SELECT name, price FROM products WHERE id = %s;", (product_id,))
+            old_data = cursor.fetchone()
+        with allure.step("Обновление данных"):
+            product_new_data = {
+                "name": "Test",
+                "price": ""
+            }
+            response = requests.put(f"{API_URL}/product/{product_id}", json=product_new_data)
+            assert response.status_code == 400
+
+        with allure.step("Проверка"):
+            cursor.execute("SELECT name, price FROM products WHERE id = %s;", (product_id,))
+            result = cursor.fetchone()
+            assert old_data == result
+        cursor.close()
+
+    @allure.story("Update invalid ID product")
+    def test_update_product_without_name(self):
+        invalid_id = 99999999
+        with allure.step("Обновление данных"):
+            product_new_data = {
+                "name": "",
+                "price": "1.00"
+            }
+            response = requests.put(f"{API_URL}/product/{invalid_id}", json=product_new_data)
+            assert response.status_code == 404
+
+
+@allure.feature("Product Management DELETE Via API")
+class TestDeleteProduct:
+    pass

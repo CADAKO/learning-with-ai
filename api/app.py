@@ -83,7 +83,7 @@ def get_product(product_id):
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "SELECT * FROM products WHERE id = %s;", (product_id,))
+            "SELECT name, price, is_active FROM products WHERE id = %s;", (product_id,))
         product_data = cursor.fetchone()
         if product_data is None:
             return jsonify({"error": "Product not found"}), 404

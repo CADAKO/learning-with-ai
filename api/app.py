@@ -21,9 +21,9 @@ def get_db_connection():
     return conn
 
 
-def get_discount(price):
+def get_discount(price, coupon_code):
     try:
-        response = requests.get(f"{DISCOUNT_SERVICE_URL}/product_discount?price={price}")
+        response = requests.get(f"{DISCOUNT_SERVICE_URL}/product_discount?price={price}&coupon_code={coupon_code}")
         if response.status_code == 200 or response.status_code == 201:
             discount_data = response.json()
             # Возвращаем новую цену из ответа
@@ -48,10 +48,12 @@ def add_product():
     data = request.get_json()
     name = data.get('name')
     price = data.get('price')
+    is_active = data.get('is_active', True)
+    original_price = price
 
     if not name or not price:
         return jsonify({"error": "Missing name or price"}), 400
-    if price[0] == "-" or len(name)>100 or len(name)<1:
+    if price[0] == "-" or len(name) > 100 or len(name) < 1:
         return jsonify({"error": "Invalid name or price"}), 400
 
     conn = get_db_connection()
@@ -61,10 +63,10 @@ def add_product():
             Decimal(str(price))  # Попытка преобразования
         except InvalidOperation:
             return jsonify({"error": "Price must be a valid number"}), 400
-        price = get_discount(price)
+        # price = get_discount(price)
         cursor.execute(
-            "INSERT INTO products (name, price) VALUES (%s, %s) RETURNING id;",
-            (name, price)
+            "INSERT INTO products (name, price, is_active, original_price) VALUES (%s, %s, %s, %s) RETURNING id;",
+            (name, price, is_active, original_price)
         )
         new_id = cursor.fetchone()[0]
         conn.commit()
@@ -83,16 +85,17 @@ def get_product(product_id):
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "SELECT name, price, is_active FROM products WHERE id = %s;", (product_id,))
+            "SELECT name, price, is_active, original_price FROM products WHERE id = %s;", (product_id,))
         product_data = cursor.fetchone()
         if product_data is None:
             return jsonify({"error": "Product not found"}), 404
         # Преобразуем результат в словарь для красивого JSON-ответа
-        name, price, is_active = product_data
+        name, price, is_active, original_price = product_data
         response_data = {
             "name": name,
             "price": str(price),
-            "is_active": is_active
+            "is_active": is_active,
+            "original_price": original_price
         }
         return jsonify({"status": "success", "product": response_data}), 200
     finally:
@@ -110,26 +113,31 @@ def update_product(product_id):
     try:
         # Посмотрим сначала, есть ли такой продукт
         cursor.execute(
-            "SELECT COUNT(*) FROM products WHERE id = %s;",
+            "SELECT original_price FROM products WHERE id = %s;",
             (product_id,))
-        product_check = cursor.fetchone()[0]
-        if product_check < 1:
+        result = cursor.fetchone()
+        if result is None:
             return jsonify({"error": "Product not found"}), 404
         data = request.get_json()
         name = data.get('name')
         price = data.get('price')
         active = data.get('is_active', True)
+        original_price = Decimal(str(result[0]))
+        coupon_code = data.get('coupon_code')
         if not name or not price:
             return jsonify({"error": "Missing name or price"}), 400
-        if price[0] == "-" or len(name) > 100 or len(name) < 1:
-            return jsonify({"error": "Invalid name or price"}), 400
+        if len(name) > 100 or len(name) < 1:
+            return jsonify({"error": "Invalid name length (1-100)"}), 400
         try:
             Decimal(str(price))  # Попытка преобразования
         except InvalidOperation:
             return jsonify({"error": "Price must be a valid number"}), 400
+        final_price = Decimal(str(price))
+        if coupon_code:
+            final_price = get_discount(original_price, coupon_code)
         cursor.execute(
             "UPDATE products SET name = %s, price = %s, is_active = %s WHERE id = %s;",
-            (name, price, active, product_id,)
+            (name, final_price, active, product_id,)
         )
         conn.commit()
         return jsonify({"status": "success", "id": product_id}), 200
@@ -156,6 +164,28 @@ def delete_product(product_id):
     except psycopg2.Error as e:
         conn.rollback()
         return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/products', methods=['GET'])
+def get_all_products():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('SELECT id, name, price, is_active, original_price FROM products ORDER BY id DESC;')
+        products = cursor.fetchall()
+        product_list = []
+        for id, name, price, is_active, original_price in products:
+            product_list.append({
+                "id": id,
+                "name": name,
+                "price": price,
+                "is_active": is_active,
+                "original_price": original_price
+            })
+        return jsonify(product_list), 200
     finally:
         cursor.close()
         conn.close()

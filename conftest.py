@@ -41,7 +41,9 @@ API_URL = os.environ.get("API_URL", "http://localhost:5000")
 @pytest.fixture(scope="function")
 def product_setup(db_connection):
     new_product = {"name": "Test Product",
-                   "price": "100.00"
+                   "price": "100.00",
+                   "is_active": True,
+                   "original_price": "100.00"
                    }
     response = requests.post(f"{API_URL}/product", json=new_product)
     assert response.status_code == 201

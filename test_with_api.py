@@ -256,7 +256,8 @@ class TestAddProduct:
             # 2. Валидация в БД: Проверяем, что запись появилась и данные верны
         with db_connection.cursor() as cursor:
             with allure.step("Валидация данных в базе данных"):
-                cursor.execute("SELECT name, price, is_active, original_price FROM products WHERE id = %s;", (new_product_id,))
+                cursor.execute("SELECT name, price, is_active, original_price FROM products WHERE id = %s;",
+                               (new_product_id,))
                 result = cursor.fetchone()
                 assert result is not None, "Продукт не найден в базе данных после запроса API"
 
@@ -306,10 +307,11 @@ class TestUpdateProduct:
             assert response.status_code == 200
         with db_connection.cursor() as cursor:
             with allure.step("Проверка"):
-                cursor.execute("SELECT name, price, is_active, original_price FROM products WHERE id = %s;", (product_id,))
+                cursor.execute("SELECT name, price, is_active FROM products WHERE id = %s;",
+                               (product_id,))
                 result = cursor.fetchone()
                 assert result is not None, "Продукт не найден в базе данных"
-                name, price, active, original_price = result
+                name, price, active = result
                 assert name == product_new_data["name"]
                 assert str(price) == product_new_data["price"]
                 assert active is True
@@ -362,7 +364,7 @@ class TestUpdateProduct:
                 cursor.execute("SELECT name, price FROM products WHERE id = %s;", (product_id,))
                 old_data = cursor.fetchone()
                 old_name, old_price = old_data
-                allure.attach("old price = %s", old_price)
+                allure.attach(f"old price = {old_price}")
             with allure.step("Обновление данных"):
                 product_new_data = {
                     "name": old_name,
@@ -377,13 +379,13 @@ class TestUpdateProduct:
                 cursor.execute("SELECT name, price, original_price FROM products WHERE id = %s;", (product_id,))
                 result = cursor.fetchone()
                 new_name, new_price, original_price = result
-                allure.attach("original price = %s", original_price)
+                allure.attach(f"original price = {original_price}")
                 cursor.execute("SELECT discount_percent FROM coupons WHERE code = %s", ("SALE10",))
                 discount_percent = cursor.fetchone()[0]
-                allure.attach("discount percent = %s", discount_percent)
+                allure.attach(f"discount percent = {discount_percent}")
                 assert old_name == new_name
                 discount_price = original_price * (Decimal("1.00") - discount_percent / Decimal("100.00"))
-                allure.attach("new price == discount price",new_price, discount_price)
+                allure.attach(f"new price ({new_price} == discount price ({discount_price})")
                 assert new_price == discount_price
 
     @allure.story("Update product with fake discount")

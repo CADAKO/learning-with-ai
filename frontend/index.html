@@ -99,17 +99,21 @@
         async function applyDiscount(productId) {
             const couponInput = document.getElementById(`coupon-${productId}`);
             const couponCode = couponInput.value;
-            if (!couponCode) { showStatus("Введите код купона", true); return; }
 
-            // Получаем данные о товаре (price здесь - текущая цена)
+            if (!couponCode) {
+                showStatus("Введите код купона", true);
+                return; // <<< Выход, если поле пустое
+            }
+
+            // --- Проблема где-то здесь ---
             const responseGet = await apiFetch(`${API_BASE_URL}/product/${productId}`);
-            const productData = (await responseGet.json()).product;
+            const productData = (await responseGet.json());
 
             const updateData = {
                 name: productData.name,
-                price: productData.price, // Отправляем текущую цену
+                price: productData.price,
                 is_active: productData.is_active,
-                coupon_code: couponCode // Добавляем код купона
+                coupon_code: couponCode
             };
 
             await apiFetch(`${API_BASE_URL}/product/${productId}`, {
@@ -119,13 +123,13 @@
             });
 
             showStatus(`Скидка ${couponCode} применена!`);
-            loadProducts(); // Обновляем список
+            loadProducts();
         }
 
         // 6. Отмена скидки (новая функция, использует PUT)
         async function cancelDiscount(productId, originalPrice) {
             const responseGet = await apiFetch(`${API_BASE_URL}/product/${productId}`);
-            const productData = (await responseGet.json()).product;
+            const productData = (await responseGet.json());
 
             const updateData = {
                 name: productData.name,

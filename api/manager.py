@@ -42,7 +42,7 @@ class ProductManager:
                 return new_id
 
     def _apply_discount_logic(self, product: Product,
-                              coupon_code: Optional[str]) -> Product:
+                              coupon_code: str) -> Product:
         final_price = product.price
         if coupon_code:
             final_price = get_discount(product.original_price, coupon_code)

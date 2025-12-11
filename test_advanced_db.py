@@ -1,6 +1,7 @@
 # test_advanced_db.py
 from decimal import Decimal
 
+
 def test_max_price_active(db_connection):
     """Проверка общего количества товаров в таблице."""
     cursor = db_connection.cursor()
@@ -13,7 +14,8 @@ def test_max_price_active(db_connection):
 
 def test_active_product_present(db_connection):
     cursor = db_connection.cursor()
-    # SQL-запрос для выборки цены товара "Keyboard", который не активен (is_active = FALSE)
+    # SQL-запрос для выборки цены товара "Keyboard", который не активен
+    # (is_active = FALSE)
     cursor.execute("SELECT * FROM products WHERE name = %s AND is_active = TRUE;", ('Mouse',))
     result = cursor.fetchone()
     assert result is not None, "Товар 'Mouse' не найден или не неактивен"

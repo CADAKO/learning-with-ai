@@ -87,7 +87,7 @@ services:
       # >>>>> Для перехвата Charles:
 #      http_proxy: http://host.docker.internal:8888
 #      https_proxy: http://host.docker.internal:8888
-    command: pytest --alluredir=allure-results # Команда для запуска тестов с отчетом allure
+    command: pytest -v -s --alluredir=allure-results
 
   load_tests:
     build: . # Использует тот же Dockerfile и requirements.txt, что и сервис tests

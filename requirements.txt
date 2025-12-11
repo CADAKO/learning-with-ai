@@ -1,7 +1,12 @@
 # requirements.txt
-psycopg2-binary
+psycopg2-binary --only-binary psycopg2-binary
 pytest
 requests
 allure-pytest
 locust
 playwright
+black # Форматтер кода
+flake8 # Линтер (проверка стиля и ошибок)
+mypy # Статический анализатор типов (проверяет аннотации)
+types-psycopg2 # Заглушки для psycopg2
+types-requests # Заглушки для requests

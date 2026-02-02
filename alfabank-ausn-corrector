@@ -1,0 +1,131 @@
+/**
+ * БАНКОВСКИЙ РОБОТ-РАЗМЕТЧИК v1.0 (STABLE)
+ * Назначение: Автоматическая корректировка типа и категории операций
+ * в сервисе бухгалтерия для АУСН Доходы-Расходы.
+ * Операции с текстом в описании "Комиссия" и Размеченные банком помечает как
+ * Расходы - Комиссия за эквайринг
+ * Операции с текстом "Возм" и Размеченные банком или вручную помечает как
+ * Необлагаемая операция - Эквайринг
+ */
+(async function stableOperationBot() {
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    
+    // UI: Кнопка экстренной остановки
+    let isRunning = true;
+    const stopBtn = document.createElement('button');
+    stopBtn.innerHTML = '🛑 STOP BOT';
+    stopBtn.style = 'position:fixed;top:10px;right:10px;z-index:99999;padding:12px;background:#e74c3c;color:white;border:none;cursor:pointer;font-weight:bold;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.3);font-family:sans-serif;';
+    stopBtn.onclick = () => { isRunning = false; stopBtn.innerHTML = '⌛ Останавливаюсь...'; };
+    document.body.appendChild(stopBtn);
+
+    const smartClick = (el) => {
+        if (!el) return;
+        const event = new MouseEvent('click', { view: window, bubbles: true, cancelable: true });
+        el.dispatchEvent(event);
+    };
+
+    // Поиск по конкретным текстовым узлам (игнорирует иконки и вложенный мусор)
+    const findExactOption = (targetText) => {
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+        let node;
+        const candidates = [];
+        while (node = walker.nextNode()) {
+            if (node.textContent.trim() === targetText) {
+                const parent = node.parentElement;
+                if (parent && parent.offsetWidth > 0 && parent.offsetHeight > 0) candidates.push(parent);
+            }
+        }
+        return candidates[candidates.length - 1];
+    };
+
+    console.log('%c[v1.0 STABLE] Робот запущен. Анализирую DOM...', 'color: #2ecc71; font-weight: bold; font-size: 14px;');
+
+    while (isRunning) {
+        // Поиск целевой карточки транзакции
+        const targetCard = Array.from(document.querySelectorAll('.operations-history-table-transaction'))
+            .find(card => {
+                const markup = card.querySelector('.operations-history-table-transaction__markup')?.textContent || "";
+                const title = card.querySelector('.operations-history-table-transaction__header-title')?.textContent || "";
+                const currentType = card.querySelector('[data-test-id="operation-type"]')?.textContent.trim() || "";
+
+                const isCorrectStatus = markup.includes('РАЗМЕЧЕНО БАНКОМ') || markup.includes('ИЗМЕНЕНО ВРУЧНУЮ');
+                const isTargetItem = title.includes('Комиссия') || title.includes('Возм');
+                
+                // Проверки-исключения
+                const alreadyDone = currentType === 'Необлагаемая операция' && title.includes('Возм');
+                const isExpense = currentType === 'Расход' && title.includes('Возм');
+
+                return isCorrectStatus && isTargetItem && !alreadyDone && !isExpense && card.offsetWidth > 0;
+            });
+
+        if (!targetCard) {
+            console.log('%c[FINISH] Все операции на странице обработаны или пропущены.', 'color: #2ecc71; font-weight: bold');
+            break;
+        }
+
+        const titleText = targetCard.querySelector('.operations-history-table-transaction__header-title').textContent;
+        const isCommission = titleText.includes('Комиссия');
+        
+        const config = isCommission 
+            ? { type: 'Расход', category: 'Комиссия за эквайринг' }
+            : { type: 'Необлагаемая операция', category: 'Эквайринг' };
+
+        try {
+            targetCard.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            await sleep(500);
+
+            const editBtn = targetCard.querySelector('.operations-history-table-transaction__transaction-edit-btn');
+            if (!editBtn) continue;
+
+            console.log(`%c[PROCESS] ${isCommission ? 'Комиссия' : 'Возмещение'} -> ${config.type}`, 'color: #3498db');
+            smartClick(editBtn);
+            await sleep(2000); // Ожидание анимации модального окна
+
+            // 1. Установка Типа
+            const typeField = document.querySelector('[data-test-id="operation-type-select-field"]');
+            if (typeField) {
+                smartClick(typeField);
+                await sleep(800);
+                const opt = findExactOption(config.type);
+                if (opt) {
+                    smartClick(opt);
+                    await sleep(1500); // Ждем перестроения списка категорий
+                }
+            }
+
+            // 2. Установка Категории
+            const catField = document.querySelector('[data-test-id="operation-category-select-field"]');
+            if (catField) {
+                smartClick(catField);
+                await sleep(1000);
+                const opt = findExactOption(config.category);
+                if (opt) {
+                    smartClick(opt);
+                    await sleep(800);
+                } else {
+                    console.warn(`[WARN] Категория "${config.category}" не найдена. Пропуск.`);
+                    smartClick(catField); // закрываем список
+                }
+            }
+
+            // 3. Сохранение результата
+            const saveBtn = findExactOption('Сохранить');
+            if (saveBtn) {
+                smartClick(saveBtn);
+                console.log('%c[OK] Данные сохранены успешно', 'color: #2ecc71');
+                await sleep(4000); // Тайм-аут для синхронизации Backend-Frontend
+            } else {
+                window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                await sleep(1500);
+            }
+
+        } catch (err) {
+            console.error('[ERROR] Ошибка итерации:', err.message);
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+            await sleep(2000);
+        }
+    }
+
+    stopBtn.remove();
+    console.log('%c[TERMINATED] Сессия завершена.', 'color: #e74c3c; font-weight: bold');
+})();
